@@ -1,0 +1,84 @@
+### IntelliJ IDEA ###
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+
+# Flutter関連
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.flutter-plugins
+.flutter-plugins-dependencies
+.idea/
+.dart_tool/
+
+# Android関連
+android/app/*.keystore
+android/local.properties
+android/.gradle
+android/app/build/
+android/build/
+
+# iOS関連
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/App.framework
+ios/Flutter/Flutter.podspec
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.podspec
+ios/Flutter/Flutter.xcworkspace/
+ios/Podfile.lock
+ios/build/
+
+# macOS関連
+macos/Pods/
+macos/build/
+
+# Windows関連
+windows/build/
+
+# Web関連
+web/build/
+
+# Linux関連
+linux/build/
+
+# その他
+*.log
+*.lock
+
+
+pubspec.yaml
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
