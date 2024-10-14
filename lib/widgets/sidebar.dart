@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';  // FirebaseAuthをインポート
+import '../pages/profile_page.dart';  // プロフィールページをインポート
+import '../pages/login_page.dart';  // ログインページをインポート
 
 class Sidebar extends StatelessWidget {
-  // グループのアイコンをリストで保持
-  final List<String> joinedGroupIcons = [
-    'assets/group1.png',  // アイコンのパス (仮)
-    'assets/group2.png',
-    'assets/group3.png',
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -26,62 +22,38 @@ class Sidebar extends StatelessWidget {
               ),
             ),
           ),
-
-          // グループ作成ボタン
+          
+          // プロフィールボタン
           ListTile(
-            leading: Icon(Icons.add),
-            title: Text('グループ作成'),
+            leading: Icon(Icons.person),
+            title: Text('プロフィール'),
             onTap: () {
-              _createGroup(context);  // グループ作成機能の呼び出し
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => ProfilePage())
+              );  // プロフィールページに遷移
             },
           ),
 
           Divider(),
 
-          // 参加済みグループのアイコンリストを表示
-          Expanded(
-            child: ListView.builder(
-              itemCount: joinedGroupIcons.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: AssetImage(joinedGroupIcons[index]),
-                    radius: 20,
-                  ),
-                  title: Text('Group ${index + 1}'),  // 仮のグループ名
-                  onTap: () {
-                    // グループ選択時の処理
-                  },
-                );
-              },
-            ),
+          // グループ機能の削除に伴い、Firestoreやグループ表示部分も削除
+
+          // ログアウトボタンを追加
+          ListTile(
+            leading: Icon(Icons.logout),
+            title: Text('ログアウト'),
+            onTap: () async {
+              // ログアウト処理
+              await FirebaseAuth.instance.signOut();
+              
+              // ログインページに戻る
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => LoginPage())
+              );
+            },
           ),
         ],
       ),
-    );
-  }
-
-  // グループ作成時の処理 (モックアップ)
-  void _createGroup(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('グループ作成'),
-          content: TextField(
-            decoration: InputDecoration(hintText: 'グループ名を入力'),
-          ),
-          actions: <Widget>[
-            ElevatedButton(
-              child: Text('作成'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                // グループ作成ロジックをここに追加
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }

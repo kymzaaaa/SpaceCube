@@ -1,102 +1,217 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../widgets/sidebar.dart'; // サイドバーをインポート
+import '../widgets/post_tile.dart';
+import '../widgets/sidebar.dart';
+import '../widgets/new_post.dart';
+import '../services/ranking_service.dart'; // ランキングサービスをインポート
+import '../services/following_service.dart'; // フォロー中の投稿サービスをインポート
 
 class HomePage extends StatefulWidget {
   @override
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  User? user;
-  bool isVerified = false;
+class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  List<String> followingUserIds = [];
+  bool isLoading = true;
+  User? currentUser = FirebaseAuth.instance.currentUser;
+
+  final RankingService _rankingService = RankingService();
+  final FollowingService _followingService = FollowingService();
 
   @override
   void initState() {
     super.initState();
-    user = _auth.currentUser;
-    _checkEmailVerification();  // メール認証状態をチェック
+    _tabController = TabController(length: 4, vsync: this);
+    _fetchFollowingUsers();
   }
 
-  // メール認証状態を定期的に確認
-  Future<void> _checkEmailVerification() async {
-    if (user != null && !user!.emailVerified) {
-      Future.delayed(Duration(seconds: 5), () async {
-        await user!.reload();
-        user = _auth.currentUser;
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
-        setState(() {
-          isVerified = user!.emailVerified;
-        });
+  Future<void> _fetchFollowingUsers() async {
+    if (currentUser != null) {
+      final followingSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser!.uid)
+          .collection('following')
+          .get();
 
-        if (isVerified) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('メールが認証されました！'),
-          ));
-        } else {
-          _checkEmailVerification();
-        }
+      setState(() {
+        followingUserIds = followingSnapshot.docs.map((doc) => doc.id).toList();
+        followingUserIds.add(currentUser!.uid); // 自分のユーザーIDを追加
+        isLoading = false;
       });
     }
   }
 
-  // 手動で更新ボタンを押して確認
-  Future<void> _manualCheck() async {
-    await user!.reload();
-    user = _auth.currentUser;
-
-    setState(() {
-      isVerified = user!.emailVerified;
-    });
-
-    if (isVerified) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('メールが認証されました！'),
-      ));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('まだメールが認証されていません。'),
-      ));
-    }
+  // 下に引っ張ってデータを更新するメソッド
+  Future<void> _refreshData() async {
+    await _fetchFollowingUsers();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (user != null && !isVerified) {
-      return Scaffold(
-        appBar: AppBar(title: Text('メール認証が必要です')),
-        drawer: Sidebar(), // サイドバーを追加
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('メールアドレスがまだ確認されていません。'),
-              ElevatedButton(
-                onPressed: () async {
-                  await user!.sendEmailVerification();
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('確認メールを再送信しました。'),
-                  ));
-                },
-                child: Text('確認メールを再送信'),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _manualCheck,
-                child: Text('手動で更新'),
-              ),
-            ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('タイムライン'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(text: 'フォロー中'),
+            Tab(text: '今日'),
+            Tab(text: '週'),
+            Tab(text: '月'),
+          ],
+        ),
+      ),
+      drawer: Sidebar(),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: NewPost(),
           ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildFollowingTimeline(),
+                _buildRankingTimeline('day'),
+                _buildRankingTimeline('week'),
+                _buildRankingTimeline('month'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // フォロー中のユーザーの投稿を表示
+  Widget _buildFollowingTimeline() {
+    if (isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (followingUserIds.isEmpty) {
+      return Center(child: Text("フォローしてみましょう！"));
+    }
+
+    if (followingUserIds.length <= 10) {
+      return RefreshIndicator(
+        onRefresh: _refreshData, // 下に引っ張ったときにデータを再読み込み
+        child: StreamBuilder<QuerySnapshot>(
+          stream: _followingService.getPostsForFollowing(followingUserIds),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(child: Text("投稿を取得できませんでした"));
+            }
+
+            final posts = snapshot.data?.docs ?? [];
+
+            if (posts.isEmpty) {
+              return Center(child: Text("フォロー中のユーザーの投稿がありません"));
+            }
+
+            return ListView.builder(
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                var post = posts[index].data() as Map<String, dynamic>;
+                return PostTile(
+                  uid: post['uid'],
+                  text: post['text'],
+                  imageUrl: post['imageUrl'],
+                  likes: post['likes'],
+                  timestamp: post['timestamp'],
+                  postId: posts[index].id,
+                );
+              },
+            );
+          },
+        ),
+      );
+    } else {
+      return RefreshIndicator(
+        onRefresh: _refreshData, // データの再読み込み
+        child: FutureBuilder<List<DocumentSnapshot>>(
+          future: _followingService.fetchPostsForFollowing(followingUserIds),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(child: Text("投稿を取得できませんでした"));
+            }
+
+            final posts = snapshot.data ?? [];
+
+            if (posts.isEmpty) {
+              return Center(child: Text("フォロー中のユーザーの投稿がありません"));
+            }
+
+            return ListView.builder(
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                var post = posts[index].data() as Map<String, dynamic>;
+                return PostTile(
+                  uid: post['uid'],
+                  text: post['text'],
+                  imageUrl: post['imageUrl'],
+                  likes: post['likes'],
+                  timestamp: post['timestamp'],
+                  postId: posts[index].id,
+                );
+              },
+            );
+          },
         ),
       );
     }
+  }
 
-    return Scaffold(
-      appBar: AppBar(title: Text('ホームページ')),
-      drawer: Sidebar(), // 認証後にもサイドバーを表示
-      body: Center(
-        child: Text('ようこそ！メールが認証されました。'),
+  // ランキングの投稿を表示
+  Widget _buildRankingTimeline(String period) {
+    return RefreshIndicator(
+      onRefresh: _refreshData, // 下に引っ張ったときにデータを再読み込み
+      child: StreamBuilder<QuerySnapshot>(
+        stream: _rankingService.getRankingPosts(period),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          final posts = snapshot.data!.docs;
+
+          if (posts.isEmpty) {
+            return Center(child: Text("ランキングデータがありません"));
+          }
+
+          return ListView.builder(
+            itemCount: posts.length,
+            itemBuilder: (context, index) {
+              var post = posts[index].data() as Map<String, dynamic>;
+              return PostTile(
+                uid: post['uid'],
+                text: post['text'],
+                imageUrl: post['imageUrl'],
+                likes: post['likes'],
+                timestamp: post['timestamp'],
+                postId: posts[index].id,
+              );
+            },
+          );
+        },
       ),
     );
   }

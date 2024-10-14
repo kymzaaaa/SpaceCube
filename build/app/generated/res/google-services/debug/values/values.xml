@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="default_web_client_id" translatable="false">15572405989-tgbmqt05cnu6b5e30thudlr46tli5vop.apps.googleusercontent.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">15572405989</string>
+    <string name="google_api_key" translatable="false">AIzaSyB2n9239nSBOb6vGSd0azh-mXJ9VntGk3A</string>
+    <string name="google_app_id" translatable="false">1:15572405989:android:5a47260c6118ee42b84e0c</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyB2n9239nSBOb6vGSd0azh-mXJ9VntGk3A</string>
+    <string name="google_storage_bucket" translatable="false">space-cube-2d524.appspot.com</string>
+    <string name="project_id" translatable="false">space-cube-2d524</string>
+</resources>

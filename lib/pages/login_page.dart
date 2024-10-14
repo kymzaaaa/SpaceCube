@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -41,10 +42,29 @@ class _LoginPageState extends State<LoginPage> {
         idToken: googleAuth.idToken,
       );
 
-      await _auth.signInWithCredential(credential);
-      Navigator.pushReplacementNamed(context, '/home');
+      // Firebaseでサインイン
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+
+      // Firestoreでユーザーが存在するかを確認
+      final User? user = userCredential.user;
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+
+      if (userDoc.exists) {
+        // ユーザーがFirestoreに存在する場合のみログイン成功
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        // Firestoreにユーザーが存在しない場合はログアウトする
+        await _auth.signOut();
+        await GoogleSignIn().signOut(); // Googleからもサインアウト
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('このGoogleアカウントは未登録です。新規登録を行ってください。'),
+        ));
+      }
     } catch (e) {
       print('Googleサインインエラー: $e');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Googleサインインに失敗しました。もう一度お試しください。'),
+      ));
     }
   }
 

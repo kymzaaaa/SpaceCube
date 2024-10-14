@@ -1,4 +1,4 @@
-# Uncomment this line to define a global platform for your project
+# iOSの最低サポートバージョンを12.0に設定
 platform :ios, '18.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
@@ -28,22 +28,21 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  use_frameworks!
-  use_modular_headers!
+  use_frameworks!  # モジュールを使用する
+  # use_modular_headers! を削除 (use_frameworks!を使用しているため)
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
   target 'RunnerTests' do
     inherit! :search_paths
   end
 end
 
-
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'  # iOS 12.0に変更
     end
   end
 end
-
