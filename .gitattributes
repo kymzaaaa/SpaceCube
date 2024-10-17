@@ -1,0 +1,4 @@
+# iOSネイティブコードを言語統計から除外
+ios/** linguist-vendored
+macos/** linguist-vendored
+android/** linguist-vendored
