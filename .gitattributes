@@ -1,7 +1,2 @@
-# iOSやAndroidのネイティブコードを言語統計から除外
-ios/** linguist-vendored
-android/** linguist-vendored
-macos/** linguist-vendored
-linux/** linguist-vendored
-windows/** linguist-vendored
-web/** linguist-vendored
+README.md linguist-generated=true
+*.md linguist-language=Dart
